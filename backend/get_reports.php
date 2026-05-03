@@ -1,16 +1,4 @@
 <?php
-/**
- * READ API — return availability reports as JSON for the Live Study Map.
- *
- * TEAMMATE OWNERSHIP — Person 3: backend/db.php and backend/get_reports.php
- *
- * Joins:
- *   AvailabilityReport → Zone → Floor → Building, and "User" (quoted table name).
- *
- * Response shape:
- *   { "success": true, "reports": [ ... ] }
- *   { "success": false, "message": "..." } on errors
- */
 
 declare(strict_types=1);
 
@@ -19,41 +7,37 @@ require __DIR__ . '/db.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 
-/**
- * SQL we run: newest reports first (ORDER BY CreatedAt DESC).
- * We first try only “active” rows where ExpiresAt is still in the future.
- * If that returns zero rows, we run the same SELECT without the date filter
- * so you can still see sample / older data while developing.
- */
 $sqlSelect = <<<'SQL'
 SELECT
-  ar."ReportID" AS "ReportID",
-  b."BuildingName" AS "BuildingName",
-  f."FloorNumber" AS "FloorNumber",
-  z."ZoneName" AS "ZoneName",
-  u."UserName" AS "UserName",
-  ar."SeatAvailability" AS "SeatAvailability",
-  ar."NoiseLevel" AS "NoiseLevel",
-  ar."OutletAvailability" AS "OutletAvailability",
-  ar."CreatedAt" AS "CreatedAt",
-  ar."ExpiresAt" AS "ExpiresAt",
-  ar."IsFlagged" AS "IsFlagged"
-FROM "AvailabilityReport" ar
-INNER JOIN "Zone" z ON ar."ZoneID" = z."ZoneID"
-INNER JOIN "Floor" f ON z."FloorID" = f."FloorID"
-INNER JOIN "Building" b ON f."BuildingID" = b."BuildingID"
-INNER JOIN "User" u ON ar."UserID" = u."UserID"
+  ar.reportid AS "ReportID",
+  b.name AS "BuildingName",
+  f.floornumber AS "FloorNumber",
+  z.name AS "ZoneName",
+  u.name AS "UserName",
+  ar.seatavailability AS "SeatAvailability",
+  ar.noiselevel AS "NoiseLevel",
+  ar.outletavailability AS "OutletAvailability",
+  ar.createdat AS "CreatedAt",
+  ar.expiresat AS "ExpiresAt",
+  ar.isflagged AS "IsFlagged"
+FROM availabilityreport ar
+INNER JOIN zone z ON ar.zoneid = z.zoneid
+INNER JOIN floor f ON z.floorid = f.floorid
+INNER JOIN building b ON f.buildingid = b.buildingid
+INNER JOIN "User" u ON ar.userid = u.userid
 SQL;
 
 try {
-    $sqlActive = $sqlSelect . "\nWHERE ar.\"ExpiresAt\" > NOW()\nORDER BY ar.\"CreatedAt\" DESC\n";
+    // First try to show only current active reports
+    $sqlActive = $sqlSelect . "\nWHERE ar.expiresat > NOW()\nORDER BY ar.createdat DESC\n";
     $stmt = $pdo->query($sqlActive);
-    $reports = $stmt->fetchAll();
+    $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    // If all sample reports expired, show all reports so the app still displays data
     if (count($reports) === 0) {
-        $sqlAll = $sqlSelect . "\nORDER BY ar.\"CreatedAt\" DESC\n";
+        $sqlAll = $sqlSelect . "\nORDER BY ar.createdat DESC\n";
         $stmt = $pdo->query($sqlAll);
-        $reports = $stmt->fetchAll();
+        $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     echo json_encode([
@@ -64,6 +48,6 @@ try {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'message' => 'Could not load reports. Check table and column names in get_reports.php match your database.',
+        'message' => $e->getMessage()
     ]);
 }
