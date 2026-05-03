@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LabSeat — Reports</title>
   <link rel="stylesheet" href="style.css" />
+  <script src="app.js" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -75,6 +76,129 @@
       </label>
     </section>
 
+    <!-- Person 2: Create, Update, Delete Forms -->
+    <section class="crud-panel" aria-label="Report actions">
+      <div class="crud-card">
+        <h2>Create Availability Report</h2>
+        <p class="crud-help">Insert a new student-submitted availability report into the database.</p>
+
+        <form id="createReportForm" class="crud-form">
+          <label>
+            Zone ID
+            <input type="number" id="createZoneID" name="ZoneID" min="1" required placeholder="Example: 1" />
+          </label>
+
+          <label>
+            User ID
+            <input type="number" id="createUserID" name="UserID" min="1" required placeholder="Example: 2" />
+          </label>
+
+          <label>
+            Seat Availability
+            <select id="createSeatAvailability" name="SeatAvailability" required>
+              <option value="">Select</option>
+              <option value="None">None</option>
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+            </select>
+          </label>
+
+          <label>
+            Noise Level
+            <select id="createNoiseLevel" name="NoiseLevel" required>
+              <option value="">Select</option>
+              <option value="Quiet">Quiet</option>
+              <option value="Moderate">Moderate</option>
+              <option value="Loud">Loud</option>
+            </select>
+          </label>
+
+          <label>
+            Outlet Availability
+            <select id="createOutletAvailability" name="OutletAvailability" required>
+              <option value="">Select</option>
+              <option value="None">None</option>
+              <option value="Low">Low</option>
+              <option value="High">High</option>
+            </select>
+          </label>
+
+          <button type="submit" class="btn btn-primary">Add Report</button>
+          <p id="createMessage" class="form-message" aria-live="polite"></p>
+        </form>
+      </div>
+
+      <div class="crud-card">
+        <h2>Update Availability Report</h2>
+        <p class="crud-help">Modify an existing report using its ReportID.</p>
+
+        <form id="updateReportForm" class="crud-form">
+          <label>
+            Report ID
+            <input type="number" id="updateReportID" name="ReportID" min="1" required placeholder="Example: 3" />
+          </label>
+
+          <label>
+            Seat Availability
+            <select id="updateSeatAvailability" name="SeatAvailability" required>
+              <option value="">Select</option>
+              <option value="None">None</option>
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+            </select>
+          </label>
+
+          <label>
+            Noise Level
+            <select id="updateNoiseLevel" name="NoiseLevel" required>
+              <option value="">Select</option>
+              <option value="Quiet">Quiet</option>
+              <option value="Moderate">Moderate</option>
+              <option value="Loud">Loud</option>
+            </select>
+          </label>
+
+          <label>
+            Outlet Availability
+            <select id="updateOutletAvailability" name="OutletAvailability" required>
+              <option value="">Select</option>
+              <option value="None">None</option>
+              <option value="Low">Low</option>
+              <option value="High">High</option>
+            </select>
+          </label>
+
+          <label>
+            Flagged?
+            <select id="updateIsFlagged" name="IsFlagged" required>
+              <option value="false">No</option>
+              <option value="true">Yes</option>
+            </select>
+          </label>
+
+          <button type="submit" class="btn btn-primary">Update Report</button>
+          <p id="updateMessage" class="form-message" aria-live="polite"></p>
+        </form>
+      </div>
+
+      <div class="crud-card danger-card">
+        <h2>Delete Availability Report</h2>
+        <p class="crud-help">Remove an existing report from the database using its ReportID.</p>
+
+        <form id="deleteReportForm" class="crud-form">
+          <label>
+            Report ID
+            <input type="number" id="deleteReportID" name="ReportID" min="1" required placeholder="Example: 3" />
+          </label>
+
+          <button type="submit" class="btn btn-danger">Delete Report</button>
+          <p id="deleteMessage" class="form-message" aria-live="polite"></p>
+        </form>
+      </div>
+    </section>
+
     <div class="table-wrap">
       <table class="reports-table">
         <thead>
@@ -92,235 +216,10 @@
             <th scope="col">IsFlagged</th>
           </tr>
         </thead>
-        <tbody id="reportsBody">
-        </tbody>
+        <tbody id="reportsBody"></tbody>
       </table>
       <p id="emptyState" class="empty-state" hidden>No reports match the current filters.</p>
     </div>
   </main>
-
-  <script>
-    (function () {
-      const reportsBody = document.getElementById('reportsBody');
-      const emptyState = document.getElementById('emptyState');
-      const loadingOverlay = document.getElementById('loadingOverlay');
-      const errorBanner = document.getElementById('errorBanner');
-      const refreshBtn = document.getElementById('refreshBtn');
-      const filterBuilding = document.getElementById('filterBuilding');
-      const filterSeat = document.getElementById('filterSeatAvailability');
-      const filterNoise = document.getElementById('filterNoise');
-      const filterFlagged = document.getElementById('filterFlagged');
-      const statTotal = document.getElementById('statTotal');
-      const statHighAvail = document.getElementById('statHighAvail');
-      const statQuiet = document.getElementById('statQuiet');
-      const statFlagged = document.getElementById('statFlagged');
-
-      /** @type {Array<Object>} */
-      let allReports = [];
-
-      function setLoading(on) {
-        if (on) {
-          loadingOverlay.removeAttribute('hidden');
-          loadingOverlay.removeAttribute('aria-hidden');
-        } else {
-          loadingOverlay.setAttribute('hidden', '');
-          loadingOverlay.setAttribute('aria-hidden', 'true');
-        }
-        refreshBtn.disabled = on;
-      }
-
-      function showError(message) {
-        errorBanner.textContent = message;
-        errorBanner.hidden = false;
-      }
-
-      function clearError() {
-        errorBanner.textContent = '';
-        errorBanner.hidden = true;
-      }
-
-      function uniqueSorted(values) {
-        return [...new Set(values.filter((v) => v != null && String(v).trim() !== ''))].sort(
-          (a, b) => String(a).localeCompare(String(b), undefined, { sensitivity: 'base' })
-        );
-      }
-
-      function populateFilterOptions() {
-        const buildings = uniqueSorted(allReports.map((r) => r.BuildingName));
-        const seats = uniqueSorted(allReports.map((r) => r.SeatAvailability));
-        const noises = uniqueSorted(allReports.map((r) => r.NoiseLevel));
-
-        const buildingVal = filterBuilding.value;
-        filterBuilding.innerHTML = '<option value="">All buildings</option>';
-        buildings.forEach((b) => {
-          const opt = document.createElement('option');
-          opt.value = b;
-          opt.textContent = b;
-          filterBuilding.appendChild(opt);
-        });
-        if (buildings.includes(buildingVal)) filterBuilding.value = buildingVal;
-
-        const seatVal = filterSeat.value;
-        filterSeat.innerHTML = '<option value="">Any</option>';
-        seats.forEach((s) => {
-          const opt = document.createElement('option');
-          opt.value = s;
-          opt.textContent = s;
-          filterSeat.appendChild(opt);
-        });
-        if (seats.includes(seatVal)) filterSeat.value = seatVal;
-
-        const noiseVal = filterNoise.value;
-        filterNoise.innerHTML = '<option value="">Any</option>';
-        noises.forEach((n) => {
-          const opt = document.createElement('option');
-          opt.value = n;
-          opt.textContent = n;
-          filterNoise.appendChild(opt);
-        });
-        if (noises.includes(noiseVal)) filterNoise.value = noiseVal;
-
-        const flaggedVal = filterFlagged.value;
-        filterFlagged.innerHTML =
-          '<option value="">Any</option><option value="yes">Yes</option><option value="no">No</option>';
-        filterFlagged.value = flaggedVal || '';
-      }
-
-      /**
-       * "Quiet zones" — rows where NoiseLevel is Quiet (case-insensitive) or Unknown if only that exists?
-       * Using explicit match for Quiet / Low ambient per common seed data patterns.
-       */
-      function computeSummaryStats(rows) {
-        let highAvail = 0;
-        let quiet = 0;
-        let flagged = 0;
-
-        rows.forEach((r) => {
-          const seat = String(r.SeatAvailability ?? '').toLowerCase();
-          if (seat === 'high') highAvail++;
-
-          const noise = String(r.NoiseLevel ?? '').toLowerCase();
-          if (noise === 'quiet') quiet++;
-
-          if (truthyFlag(r.IsFlagged)) flagged++;
-        });
-
-        return {
-          total: rows.length,
-          highAvail,
-          quiet,
-          flagged,
-        };
-      }
-
-      function truthyFlag(val) {
-        if (typeof val === 'boolean') return val;
-        const s = String(val).toLowerCase();
-        return s === '1' || s === 'true' || s === 't' || s === 'yes';
-      }
-
-      function passesFilters(r) {
-        if (filterBuilding.value && r.BuildingName !== filterBuilding.value) return false;
-
-        if (filterSeat.value && String(r.SeatAvailability) !== filterSeat.value) return false;
-
-        if (filterNoise.value && String(r.NoiseLevel) !== filterNoise.value) return false;
-
-        if (filterFlagged.value) {
-          const isF = truthyFlag(r.IsFlagged);
-          if (filterFlagged.value === 'yes' && !isF) return false;
-          if (filterFlagged.value === 'no' && isF) return false;
-        }
-        return true;
-      }
-
-      function renderFlagCell(isFlagged) {
-        return truthyFlag(isFlagged)
-          ? '<span class="badge flagged">Yes</span>'
-          : '<span class="badge">No</span>';
-      }
-
-      function escapeHtml(text) {
-        if (text == null) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-      }
-
-      function renderTable() {
-        const filtered = allReports.filter(passesFilters);
-        const frag = document.createDocumentFragment();
-
-        filtered.forEach((r) => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = [
-            escapeHtml(r.ReportID),
-            escapeHtml(r.BuildingName),
-            escapeHtml(r.FloorNumber),
-            escapeHtml(r.ZoneName),
-            escapeHtml(r.UserName),
-            escapeHtml(r.SeatAvailability),
-            escapeHtml(r.NoiseLevel),
-            escapeHtml(r.OutletAvailability),
-            escapeHtml(r.CreatedAt),
-            escapeHtml(r.ExpiresAt),
-            renderFlagCell(r.IsFlagged),
-          ]
-            .map((cell) => `<td>${cell}</td>`)
-            .join('');
-          frag.appendChild(tr);
-        });
-
-        reportsBody.replaceChildren(frag);
-        emptyState.hidden = filtered.length !== 0;
-
-        const summary = computeSummaryStats(filtered);
-        statTotal.textContent = String(summary.total);
-        statHighAvail.textContent = String(summary.highAvail);
-        statQuiet.textContent = String(summary.quiet);
-        statFlagged.textContent = String(summary.flagged);
-      }
-
-      async function loadReports() {
-        clearError();
-        setLoading(true);
-        try {
-          const res = await fetch('get_reports.php', { cache: 'no-store' });
-          if (!res.ok) {
-            throw new Error('Request failed with status ' + res.status);
-          }
-          const data = await res.json();
-          if (!Array.isArray(data)) {
-            throw new Error('Expected a JSON array from get_reports.php');
-          }
-          allReports = data;
-          populateFilterOptions();
-          renderTable();
-        } catch (e) {
-          allReports = [];
-          reportsBody.replaceChildren();
-          emptyState.hidden = true;
-          showError(
-            'Could not load reports. ' +
-              (e && e.message ? e.message : 'Check that get_reports.php is reachable.') +
-              ' Use Refresh to try again.'
-          );
-          statTotal.textContent = '0';
-          statHighAvail.textContent = '0';
-          statQuiet.textContent = '0';
-          statFlagged.textContent = '0';
-        } finally {
-          setLoading(false);
-        }
-      }
-
-      refreshBtn.addEventListener('click', loadReports);
-      [filterBuilding, filterSeat, filterNoise, filterFlagged].forEach((el) => {
-        el.addEventListener('change', renderTable);
-      });
-
-      window.addEventListener('DOMContentLoaded', loadReports);
-    })();
-  </script>
 </body>
 </html>
