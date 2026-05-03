@@ -1,4 +1,6 @@
-# LabSeat Live Study Map (`labseat-phase03`)
+# LabSeat Live Study Map
+
+**Repository:** [github.com/kanagant/labseat](https://github.com/kanagant/labseat)
 
 Starter repo for **CSE 412 — Phase 03**. This app connects a simple HTML/CSS/JS frontend to PHP API scripts backed by PostgreSQL.
 
@@ -57,10 +59,10 @@ Project layout:
 
 ## How to run the PHP server
 
-From the **`labseat-phase03`** project root (not inside `frontend/`):
+From your **`labseat`** clone folder—the repo root alongside `frontend/` and `backend/` (not inside `frontend/`):
 
 ```bash
-cd labseat-phase03
+cd /path/to/labseat   # wherever you cloned this repo
 php -S localhost:8000
 ```
 
