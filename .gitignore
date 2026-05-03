@@ -1,0 +1,11 @@
+# Never commit secrets — copy config.example.php to config.php locally
+backend/config.php
+
+# macOS
+.DS_Store
+
+# Screenshots and temp uploads (keep final docs/screenshots/*.png intentional)
+docs/screenshots/temp/
+*.tmp
+*.temp
+*.swp

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<!--
+  LabSeat Live Study Map — main page scaffold.
+
+  TEAMMATE OWNERSHIP — Person 1:
+    - frontend/index.html
+    - Live availability display (map/list of seats or zones)
+
+  Others: Coordinate with Person 1 before changing landmark structure (#app, main regions).
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LabSeat Live Study Map</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <h1>LabSeat Live Study Map</h1>
+    <p class="tagline">CSE 412 — Phase 03 (starter layout)</p>
+  </header>
+
+  <main id="app">
+    <!-- Person 1: Replace this block with live availability UI (zones, counts, statuses). -->
+    <section id="live-availability" aria-label="Live availability">
+      <h2>Live availability</h2>
+      <p class="hint">Hook this section to JSON from <code>/backend/get_reports.php</code> (run PHP from project root).</p>
+      <ul id="availability-list">
+        <li>(Example) Data loads here once the frontend fetches reports.</li>
+      </ul>
+    </section>
+
+    <!-- Person 2: Forms and action buttons scaffold (wired in app.js). -->
+    <section id="reports-actions" aria-label="Report actions">
+      <h2>Reports</h2>
+      <form id="report-form" class="stack">
+        <label>
+          Notes (starter field)
+          <input type="text" name="notes" placeholder="Phase 03: replace with real inputs" />
+        </label>
+        <div class="row">
+          <button type="button" id="btn-add">Add (placeholder)</button>
+          <button type="button" id="btn-refresh">Refresh list</button>
+        </div>
+      </form>
+      <pre id="output" class="output" aria-live="polite">API responses appear here.</pre>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
