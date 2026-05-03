@@ -1,10 +1,4 @@
 <?php
-/**
- * READ endpoint — return seat/study-space reports as JSON for the Live Study Map.
- *
- * TEAMMATE OWNERSHIP — Person 3: backend/db.php and backend/get_reports.php
- * Replace the placeholder query with your real Phase 03 SELECT once tables exist.
- */
 
 declare(strict_types=1);
 
@@ -13,14 +7,47 @@ require __DIR__ . '/db.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 
+$sqlSelect = <<<'SQL'
+SELECT
+  ar.reportid AS "ReportID",
+  b.name AS "BuildingName",
+  f.floornumber AS "FloorNumber",
+  z.name AS "ZoneName",
+  u.name AS "UserName",
+  ar.seatavailability AS "SeatAvailability",
+  ar.noiselevel AS "NoiseLevel",
+  ar.outletavailability AS "OutletAvailability",
+  ar.createdat AS "CreatedAt",
+  ar.expiresat AS "ExpiresAt",
+  ar.isflagged AS "IsFlagged"
+FROM availabilityreport ar
+INNER JOIN zone z ON ar.zoneid = z.zoneid
+INNER JOIN floor f ON z.floorid = f.floorid
+INNER JOIN building b ON f.buildingid = b.buildingid
+INNER JOIN "User" u ON ar.userid = u.userid
+SQL;
+
 try {
-    // TODO (Person 3): SELECT from your Phase 03 / Phase 2 schema (e.g. reports or seats table).
-    $stmt = $pdo->query(
-        'SELECT 1 AS id, \'Example row — replace this query\' AS message, NOW() AS loaded_at LIMIT 1'
-    );
-    $rows = $stmt->fetchAll();
-    echo json_encode(['ok' => true, 'reports' => $rows]);
+    // First try to show only current active reports
+    $sqlActive = $sqlSelect . "\nWHERE ar.expiresat > NOW()\nORDER BY ar.createdat DESC\n";
+    $stmt = $pdo->query($sqlActive);
+    $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // If all sample reports expired, show all reports so the app still displays data
+    if (count($reports) === 0) {
+        $sqlAll = $sqlSelect . "\nORDER BY ar.createdat DESC\n";
+        $stmt = $pdo->query($sqlAll);
+        $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    echo json_encode([
+        'success' => true,
+        'reports' => $reports,
+    ]);
 } catch (PDOException $e) {
     http_response_code(500);
-    echo json_encode(['ok' => false, 'error' => 'Query failed.', 'reports' => []]);
+    echo json_encode([
+        'success' => false,
+        'message' => $e->getMessage()
+    ]);
 }

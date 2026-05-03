@@ -1,45 +1,77 @@
 <?php
 /**
- * PostgreSQL database connection helper.
+ * LabSeat — connect to PostgreSQL using PDO.
  *
  * TEAMMATE OWNERSHIP — Person 3: backend/db.php and backend/get_reports.php
- * Person 3: Implement PDO connection, error handling, and reuse across scripts.
+ *
+ * How this works:
+ * - We read settings from config.php (see config.example.php).
+ * - PDO is PHP’s “database driver” layer; we turn on exceptions so mistakes
+ *   show up as clear errors instead of silent failures.
+ * - Other PHP scripts include this file and then use the $pdo variable below.
  */
 
 declare(strict_types=1);
 
-$configPath = __DIR__ . '/config.php';
-if (! is_readable($configPath)) {
-    http_response_code(500);
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode([
-        'ok' => false,
-        'error' => 'Missing config.php — copy backend/config.example.php to backend/config.php and fill in credentials.',
-    ]);
-    exit;
+/**
+ * Load config.php from this same folder.
+ *
+ * @return array{DB_HOST: string, DB_PORT: string, DB_NAME: string, DB_USER: string, DB_PASS: string}
+ */
+function labseat_load_config(): array
+{
+    $path = __DIR__ . '/config.php';
+    if (! is_readable($path)) {
+        throw new RuntimeException(
+            'Missing config.php. Copy backend/config.example.php to backend/config.php and fill in DB_USER and DB_PASS.'
+        );
+    }
+
+    /** @var array<string, string> $cfg */
+    $cfg = require $path;
+
+    foreach (['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASS'] as $key) {
+        if (! array_key_exists($key, $cfg)) {
+            throw new RuntimeException("config.php must define the key \"{$key}\" (see config.example.php).");
+        }
+    }
+
+    return $cfg;
 }
 
-/** @var array<string, string|int> $cfg */
-$cfg = require $configPath;
+/**
+ * Open one shared PostgreSQL connection (PDO).
+ *
+ * @throws PDOException if PostgreSQL rejects the login or the server is down
+ */
+function labseat_pdo(): PDO
+{
+    $cfg = labseat_load_config();
 
-$dsn = sprintf(
-    'pgsql:host=%s;port=%s;dbname=%s',
-    $cfg['host'],
-    $cfg['port'],
-    $cfg['dbname']
-);
+    $dsn = sprintf(
+        'pgsql:host=%s;port=%s;dbname=%s',
+        $cfg['DB_HOST'],
+        $cfg['DB_PORT'],
+        $cfg['DB_NAME']
+    );
 
-try {
-    $pdo = new PDO($dsn, (string) $cfg['user'], (string) $cfg['password'], [
+    $pdo = new PDO($dsn, $cfg['DB_USER'], $cfg['DB_PASS'], [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
     ]);
-} catch (PDOException $e) {
+
+    return $pdo;
+}
+
+// Scripts that `require` this file get a ready $pdo for queries.
+try {
+    $pdo = labseat_pdo();
+} catch (Throwable $e) {
     http_response_code(500);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode([
-        'ok' => false,
-        'error' => 'Database connection failed. Check config.php and that PostgreSQL is running.',
+        'success' => false,
+        'message' => 'Database connection failed. Check config.php and that PostgreSQL is running.',
     ]);
     exit;
 }
