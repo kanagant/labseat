@@ -240,7 +240,7 @@
     setLoading(true);
 
     try {
-      const res = await fetch('../backend/get_reports.php', { cache: 'no-store' });
+      const res = await fetch('/backend/get_reports.php', { cache: 'no-store' });
 
       if (!res.ok) {
         throw new Error('Request failed with status ' + res.status);
@@ -248,11 +248,22 @@
 
       const data = await res.json();
 
-      if (!Array.isArray(data)) {
-        throw new Error('Expected a JSON array from get_reports.php');
+      // Backend returns { success, reports }; keep support for a plain array too.
+      let rows = data;
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        if (data.success === false) {
+          throw new Error(data.message || 'Server returned an error.');
+        }
+        if (Array.isArray(data.reports)) {
+          rows = data.reports;
+        }
       }
 
-      allReports = data;
+      if (!Array.isArray(rows)) {
+        throw new Error('Expected a reports array from get_reports.php');
+      }
+
+      allReports = rows;
       populateFilterOptions();
       renderTable();
     } catch (e) {
